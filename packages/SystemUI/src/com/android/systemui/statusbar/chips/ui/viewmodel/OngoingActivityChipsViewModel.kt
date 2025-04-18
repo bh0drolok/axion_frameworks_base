@@ -67,6 +67,7 @@ constructor(
     notifChipsViewModel: NotifChipsViewModel,
     displayStateInteractor: DisplayStateInteractor,
     configurationInteractor: ConfigurationInteractor,
+    private val chipsRefiners: Set<@JvmSuppressWildcards OngoingActivityChipsRefiner>,
     @StatusBarChipsLog private val logger: LogBuffer,
 ) {
     private val isLandscape: Flow<Boolean> =
@@ -280,7 +281,7 @@ constructor(
      * A flow modeling the active and inactive chips as well as which should be shown in the status
      * bar after accounting for possibly multiple ongoing activities and animation requirements.
      */
-    val chips: StateFlow<MultipleOngoingActivityChipsModel> =
+    private val unrefinedChips =
         if (StatusBarChipsModernization.isEnabled) {
             combine(
                     incomingChipBundle.map { bundle -> rankChips(bundle) },
@@ -304,20 +305,29 @@ constructor(
                                     it
                                 }
                             }
+                        }
 
-                        MultipleOngoingActivityChipsModel(
-                            active = squishedActiveChips,
-                            overflow = rankedChips.overflow,
-                            inactive = rankedChips.inactive,
-                        )
-                    } else {
-                        rankedChips
-                    }
+                    MultipleOngoingActivityChipsModel(
+                        active = squishedActiveChips,
+                        overflow = rankedChips.overflow,
+                        inactive = rankedChips.inactive,
+                    )
+                } else {
+                    rankedChips
                 }
-                .stateIn(scope, SharingStarted.Lazily, MultipleOngoingActivityChipsModel())
+            }
         } else {
-            MutableStateFlow(MultipleOngoingActivityChipsModel()).asStateFlow()
+            MutableStateFlow(MultipleOngoingActivityChipsModel())
         }
+
+    val chips: StateFlow<MultipleOngoingActivityChipsModel> =
+        unrefinedChips
+            .map { unrefinedChips ->
+                chipsRefiners.fold(unrefinedChips) { currentOutput, refiner ->
+                    refiner.transform(currentOutput)
+                }
+            }
+            .stateIn(scope, SharingStarted.Lazily, MultipleOngoingActivityChipsModel())
 
     /**
      * A flow modeling the primary chip that should be shown in the status bar after accounting for
