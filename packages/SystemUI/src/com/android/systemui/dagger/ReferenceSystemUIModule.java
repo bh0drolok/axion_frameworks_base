@@ -190,6 +190,7 @@ import javax.inject.Provider;
         ActionCornerModule.class,
         CursorPositionModule.class,
         ContextualCursorModule.class,
+        AxDynamicBarModule.class,
 }, subcomponents = {
         ReferenceSysUIDisplaySubcomponent.class
 })
