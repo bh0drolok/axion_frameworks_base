@@ -22,6 +22,7 @@ import com.android.systemui.Flags.unfoldLatencyTrackingFix
 import com.android.systemui.LatencyTester
 import com.android.systemui.SliceBroadcastRelayHandler
 import com.android.systemui.accessibility.Magnification
+import com.android.systemui.axdynamicbar.ui.AxDynamicBarManager
 import com.android.systemui.back.domain.interactor.BackActionInteractor
 import com.android.systemui.biometrics.BiometricNotificationService
 import com.android.systemui.bouncer.domain.startable.BouncerStartable
@@ -99,6 +100,11 @@ abstract class SystemUICoreStartableModule {
     abstract fun bindBiometricNotificationService(
         service: BiometricNotificationService
     ): CoreStartable
+
+    @Binds
+    @IntoMap
+    @ClassKey(AxDynamicBarManager::class)
+    abstract fun bindAxDynamicBarManager(service: AxDynamicBarManager): CoreStartable
 
     /** Inject into ClipboardListener. */
     @Binds

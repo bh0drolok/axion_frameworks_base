@@ -224,6 +224,11 @@ public class KeyguardStatusBarView extends RelativeLayout {
                 mContext.getResources().getDisplayMetrics());
     }
 
+    int getCarrierLabelEndPx() {
+        if (mCarrierLabel == null || mCarrierLabel.getVisibility() != View.VISIBLE) return 0;
+        return mCarrierLabel.getRight();
+    }
+
     void loadDimens() {
         Resources res = getResources();
         mStatusBarExtraPaddingStart = convertToDip(Settings.System.getIntForUser(

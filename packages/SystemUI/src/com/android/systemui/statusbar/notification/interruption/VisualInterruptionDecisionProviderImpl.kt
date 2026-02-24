@@ -26,6 +26,7 @@ import com.android.app.tracing.traceSection
 import com.android.internal.annotations.VisibleForTesting
 import com.android.internal.logging.UiEventLogger
 import com.android.internal.logging.UiEventLogger.UiEventEnum
+import com.android.systemui.axdynamicbar.domain.AxDynamicBarSettings
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.settings.UserTracker
@@ -76,6 +77,7 @@ constructor(
     @ShadeDisplayAware private val context: Context,
     private val notificationManager: NotificationManager,
     private val settingsInteractor: NotificationSettingsInteractor,
+    private val axDynamicBarSettings: AxDynamicBarSettings,
 ) : VisualInterruptionDecisionProvider {
 
     init {
@@ -167,6 +169,7 @@ constructor(
         check(!started)
 
         addCondition(PeekDisabledSuppressor(globalSettings, headsUpManager, logger, mainHandler))
+        addCondition(PeekAxDynamicBarSuppressor(axDynamicBarSettings))
         addCondition(PulseDisabledSuppressor(ambientDisplayConfiguration, userTracker))
         addCondition(PulseBatterySaverSuppressor(batteryController))
         addFilter(PeekPackageSnoozedSuppressor(headsUpManager))

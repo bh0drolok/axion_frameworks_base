@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.theme.PlatformTheme
 import com.android.keyguard.AlphaOptimizedLinearLayout
+import com.android.systemui.axdynamicbar.ui.AxDynamicBarChipViewModel
+import com.android.systemui.axdynamicbar.ui.compose.AxDynamicBarChip
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager
 import com.android.systemui.media.controls.ui.view.MediaHost
@@ -88,6 +91,7 @@ constructor(
     private val eventAnimationInteractor: SystemStatusEventAnimationInteractor,
     private val mediaHierarchyManager: MediaHierarchyManager,
     @Named(POPUP) private val mediaHost: MediaHost,
+    private val axDynamicBarChipViewModel: AxDynamicBarChipViewModel,
 ) {
     fun create(root: ViewGroup, andThen: (ViewGroup) -> Unit): ComposeView {
         val composeView = ComposeView(root.context)
@@ -108,6 +112,7 @@ constructor(
                     eventAnimationInteractor = eventAnimationInteractor,
                     mediaHierarchyManager = mediaHierarchyManager,
                     mediaHost = mediaHost,
+                    axDynamicBarChipViewModel = axDynamicBarChipViewModel,
                     onViewCreated = andThen,
                 )
             }
@@ -141,6 +146,7 @@ fun StatusBarRoot(
     eventAnimationInteractor: SystemStatusEventAnimationInteractor,
     mediaHierarchyManager: MediaHierarchyManager,
     mediaHost: MediaHost,
+    axDynamicBarChipViewModel: AxDynamicBarChipViewModel,
     onViewCreated: (ViewGroup) -> Unit,
 ) {
     val displayId = parent.context.displayId
@@ -196,9 +202,15 @@ fun StatusBarRoot(
 
                                 setContent {
                                     PlatformTheme {
+                                        val axEnabled by
+                                            axDynamicBarChipViewModel.interactor.settings.isEnabled
+                                                .collectAsState()
+                                        if (axEnabled) {
+                                            AxDynamicBarChip(viewModel = axDynamicBarChipViewModel)
+                                        }
                                         val chipsVisibilityModel =
                                             statusBarViewModel.ongoingActivityChips
-                                        if (chipsVisibilityModel.areChipsAllowed) {
+                                        if (chipsVisibilityModel.areChipsAllowed && !axEnabled) {
                                             OngoingActivityChips(
                                                 chips = chipsVisibilityModel.chips,
                                                 iconViewStore = iconViewStore,

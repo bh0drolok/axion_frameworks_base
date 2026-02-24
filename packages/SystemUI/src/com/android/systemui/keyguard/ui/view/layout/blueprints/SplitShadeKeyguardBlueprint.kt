@@ -29,6 +29,7 @@ import com.android.systemui.keyguard.ui.view.layout.sections.DefaultDeviceEntryS
 import com.android.systemui.keyguard.ui.view.layout.sections.DefaultIndicationAreaSection
 import com.android.systemui.keyguard.ui.view.layout.sections.DefaultSettingsPopupMenuSection
 import com.android.systemui.keyguard.ui.view.layout.sections.DefaultShortcutsSection
+import com.android.systemui.keyguard.ui.view.layout.sections.AxDynamicBarKeyguardChipSection
 import com.android.systemui.keyguard.ui.view.layout.sections.DefaultStatusBarSection
 import com.android.systemui.keyguard.ui.view.layout.sections.KeyguardSectionsModule
 import com.android.systemui.keyguard.ui.view.layout.sections.SmartspaceSection
@@ -65,6 +66,7 @@ constructor(
     clockSection: ClockSection,
     smartspaceSection: SmartspaceSection,
     mediaSection: SplitShadeMediaSection,
+    axDynamicBarKeyguardChipSection: AxDynamicBarKeyguardChipSection,
 ) : KeyguardBlueprint {
     override val id: String = ID
 
@@ -72,6 +74,7 @@ constructor(
         listOfNotNull(
             accessibilityActionsSection,
             defaultIndicationAreaSection,
+            axDynamicBarKeyguardChipSection,
             defaultShortcutsSection,
             defaultAmbientIndicationAreaSection.getOrNull(),
             defaultSettingsPopupMenuSection,
