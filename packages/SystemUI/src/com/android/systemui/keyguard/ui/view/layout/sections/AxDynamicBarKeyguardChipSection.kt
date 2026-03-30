@@ -16,6 +16,7 @@ import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.KeyguardIndicationController
+import com.android.systemui.util.ScrimUtils
 import com.android.systemui.util.Utils
 import javax.inject.Inject
 import kotlinx.coroutines.DisposableHandle
@@ -32,6 +33,8 @@ constructor(
     private val chipViewId = R.id.ax_dynamic_bar_keyguard_chip
     private var bindHandle: DisposableHandle? = null
     private var expansionHandle: DisposableHandle? = null
+    private var enforceAction: Runnable? = null
+
     private var isCurrentlyHiding = false
 
     override fun addViews(constraintLayout: ConstraintLayout) {
@@ -64,39 +67,65 @@ constructor(
 
         expansionHandle = composeView.repeatWhenAttached {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
-                viewModel.isKeyguardExpanded.collect { expanded ->
+                combine(viewModel.isKeyguardExpanded, viewModel.isLowUdfps) { expanded, lowUdfps ->
+                    expanded to lowUdfps
+                }.collect { (expanded, lowUdfps) ->
                     isCurrentlyHiding = expanded
                     enforceHiddenViews(constraintLayout, expanded)
+
+                    enforceAction?.let { ScrimUtils.get().removeKeyguardPreDrawAction(it) }
+                    enforceAction = if (expanded) {
+                        Runnable { enforceHiddenViews(constraintLayout, true) }.also {
+                            ScrimUtils.get().addKeyguardPreDrawAction(it)
+                        }
+                    } else null
 
                     val lp = composeView.layoutParams as ConstraintLayout.LayoutParams
                     if (expanded) {
                         lp.width = ConstraintLayout.LayoutParams.MATCH_PARENT
-                        lp.height = 0 
+                        lp.height = 0
                         lp.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
                         lp.topMargin = Utils.getStatusBarHeaderHeightKeyguard(context)
                         lp.bottomToTop = R.id.start_button
                         lp.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                         lp.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
                         lp.bottomMargin = 0
-                        
+
                         lp.topToBottom = -1
                         lp.bottomToBottom = -1
                         lp.startToEnd = -1
                         lp.endToStart = -1
+                    } else if (lowUdfps) {
+                        lp.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                        lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                        lp.topMargin = 0
+
+                        lp.bottomToTop = R.id.device_entry_icon_view
+                        lp.bottomMargin = (CHIP_ABOVE_LOCK_MARGIN_DP * context.resources.displayMetrics.density + 0.5f).toInt()
+                        lp.bottomToBottom = -1
+                        lp.topToTop = -1
+
+                        lp.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                        lp.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                        lp.startToEnd = -1
+                        lp.endToStart = -1
+
+                        lp.topToBottom = -1
                     } else {
                         lp.width = ViewGroup.LayoutParams.WRAP_CONTENT
                         lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
                         lp.topMargin = 0
-                        
+
                         lp.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
                         lp.bottomMargin = context.resources.getDimensionPixelSize(com.android.internal.R.dimen.status_bar_height)
                         lp.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                         lp.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-                        
-                        lp.topToTop = -1
+
                         lp.bottomToTop = -1
+                        lp.topToTop = -1
                         lp.startToEnd = -1
                         lp.endToStart = -1
+
                         lp.topToBottom = -1
                     }
                     composeView.layoutParams = lp
@@ -107,8 +136,8 @@ constructor(
 
     override fun applyConstraints(constraintSet: ConstraintSet) {
         val expanded = viewModel.isKeyguardExpanded.value
+        val lowUdfps = viewModel.isLowUdfps.value
         constraintSet.apply {
-
             if (expanded) {
                 constrainWidth(chipViewId, ConstraintSet.MATCH_CONSTRAINT)
                 constrainHeight(chipViewId, ConstraintSet.MATCH_CONSTRAINT)
@@ -117,10 +146,16 @@ constructor(
                 connect(chipViewId, ConstraintSet.BOTTOM, R.id.start_button, ConstraintSet.TOP)
                 connect(chipViewId, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
                 connect(chipViewId, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+            } else if (lowUdfps) {
+                constrainWidth(chipViewId, ViewGroup.LayoutParams.WRAP_CONTENT)
+                constrainHeight(chipViewId, ViewGroup.LayoutParams.WRAP_CONTENT)
+                val margin = (CHIP_ABOVE_LOCK_MARGIN_DP * context.resources.displayMetrics.density + 0.5f).toInt()
+                connect(chipViewId, ConstraintSet.BOTTOM, R.id.device_entry_icon_view, ConstraintSet.TOP, margin)
+                connect(chipViewId, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+                connect(chipViewId, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
             } else {
                 constrainWidth(chipViewId, ViewGroup.LayoutParams.WRAP_CONTENT)
                 constrainHeight(chipViewId, ViewGroup.LayoutParams.WRAP_CONTENT)
-                
                 val bottomMargin = context.resources.getDimensionPixelSize(com.android.internal.R.dimen.status_bar_height)
                 connect(chipViewId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, bottomMargin)
                 connect(chipViewId, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
@@ -130,12 +165,18 @@ constructor(
     }
 
     override fun removeViews(constraintLayout: ConstraintLayout) {
+        enforceAction?.let { ScrimUtils.get().removeKeyguardPreDrawAction(it) }
+        enforceAction = null
         expansionHandle?.dispose()
         expansionHandle = null
         bindHandle?.dispose()
         bindHandle = null
         indicationController.setSuppressIndication(false)
         constraintLayout.removeView(chipViewId)
+    }
+
+    companion object {
+        private const val CHIP_ABOVE_LOCK_MARGIN_DP = 12f
     }
 
     private val preserveOnExpandIds = setOf(
