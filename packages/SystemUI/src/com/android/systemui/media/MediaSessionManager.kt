@@ -25,6 +25,7 @@ class MediaSessionManager private constructor() {
     interface MediaDataListener {
         fun onPlaybackStateChanged(state: Int) {}
         fun onAlbumArtChanged(drawable: Drawable) {}
+        fun onAppIconChanged(drawable: Drawable) {}
         fun onMediaColorsChanged(color: Int) {}
         fun onMetadataChanged(track: String, artist: String) {}
     }

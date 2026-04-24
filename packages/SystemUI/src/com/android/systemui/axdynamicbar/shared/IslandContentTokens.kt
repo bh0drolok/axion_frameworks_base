@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.android.systemui.axdynamicbar.shared
 
 import android.app.ActivityOptions
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,11 +50,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
@@ -103,8 +104,7 @@ internal const val AlphaIconBg = 0.16f
 internal const val AlphaTrack = 0.25f
 
 internal val TsBadge: TextStyle
-    @Composable get() = MaterialTheme.typography.labelSmall.copy(
-        fontSize = 8.sp,
+    @Composable get() = MaterialTheme.typography.labelSmallEmphasized.copy(
         platformStyle = PlatformTextStyle(includeFontPadding = false),
     )
 
@@ -161,19 +161,41 @@ internal val CardBorderBrush: Brush
 
 internal val PillPrimary: TextStyle
     @Composable get() = MaterialTheme.typography.labelSmall.copy(
-        fontWeight = FontWeight.SemiBold,
         platformStyle = PlatformTextStyle(includeFontPadding = false),
     )
 
 internal val PillAccent: TextStyle
-    @Composable get() = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+    @Composable get() = MaterialTheme.typography.labelLargeEmphasized
 internal val PillMono: TextStyle
-    @Composable get() = MaterialTheme.typography.labelSmall.copy(
-        fontFamily = FontFamily.Monospace,
+    @Composable get() = MaterialTheme.typography.labelSmallEmphasized.copy(
         platformStyle = PlatformTextStyle(includeFontPadding = false),
     )
+
+@Composable
+internal fun PillMonoLabel(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        color = color,
+        style = PillMono,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Clip,
+        modifier = modifier,
+    )
+}
+
 internal val TsMono: TextStyle
-    @Composable get() = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace)
+    @Composable get() = MaterialTheme.typography.labelMediumEmphasized
+
+@Composable
+internal fun AxDynamicBarTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = MaterialTheme.colorScheme,
+        typography = MaterialTheme.typography,
+        motionScheme = MaterialTheme.motionScheme,
+        content = content,
+    )
+}
 
 internal val ShapeIconLarge = RoundedCornerShape(20.dp)
 internal val ShapeIconMedium = RoundedCornerShape(16.dp)
@@ -306,7 +328,7 @@ internal fun StatusChip(text: String, color: Color = SubtleGray) {
             Modifier.background(color.copy(alpha = AlphaSubtle), ShapeChip)
                 .padding(horizontal = SpaceXl, vertical = SpaceSm)
     ) {
-        Text(text.uppercase(), color = color, style = MaterialTheme.typography.labelSmall)
+        Text(text, color = color, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -502,7 +524,7 @@ internal fun chipProgressFor(event: IslandEvent): Float? =
 
 internal fun iconKeyFor(event: IslandEvent): Any =
     when (event) {
-        is IslandEvent.Media -> event.albumArt?.hashCode() ?: "media_default"
+        is IslandEvent.Media -> "${event.packageName}|${event.track}|${event.artist}|${event.duration}"
         is IslandEvent.Notification -> event.appIcon?.hashCode() ?: "notif_default"
         is IslandEvent.AppSwitch -> {
             val app = event.previousApp ?: event.recentApps.firstOrNull()
@@ -557,4 +579,3 @@ internal fun PendingIntent.sendWithBal(context: Context, fillIntent: Intent? = n
     )
     send(context, 0, fillIntent, null, null, null, options.toBundle())
 }
-

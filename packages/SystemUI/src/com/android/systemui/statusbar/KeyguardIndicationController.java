@@ -1183,6 +1183,10 @@ public class KeyguardIndicationController {
         return computePowerChargingStringIndication();
     }
 
+    public String getPowerChargingString() {
+        return computePowerChargingStringIndication();
+    }
+
     protected String computePowerChargingStringIndication() {
         if (mPowerCharged) {
             return mContext.getResources().getString(R.string.keyguard_charged);
