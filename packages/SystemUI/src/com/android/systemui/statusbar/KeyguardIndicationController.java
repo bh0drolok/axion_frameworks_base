@@ -135,6 +135,9 @@ import dagger.Lazy;
 
 import java.io.PrintWriter;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -1337,6 +1340,35 @@ public class KeyguardIndicationController {
             chargingId = hasChargingTime
                     ? R.string.keyguard_indication_charging_time
                     : R.string.keyguard_plugged_in;
+        }
+
+        String batteryInfo = "";
+        boolean showbatteryInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
+            Settings.System.LOCKSCREEN_CHARGING_INFO, 1, UserHandle.USER_CURRENT) == 1;
+         if (showbatteryInfo) {
+            List<String> chargingDetails = new ArrayList<>();
+            if (mChargingCurrent >= mCurrentDivider * 1000) {
+                chargingDetails.add(String.format(Locale.US, "%.1f",
+                        (mChargingCurrent / (float) mCurrentDivider / 1000f)) + "A");
+            } else if (mChargingCurrent > 0) {
+                chargingDetails.add(String.format(Locale.US, "%.0f",
+                        (mChargingCurrent / (float) mCurrentDivider)) + "mA");
+            }
+            if (mChargingWattage > 0) {
+                chargingDetails.add(String.format(Locale.US, "%.1f",
+                        (mChargingWattage / (float) mCurrentDivider / 1000f)) + "W");
+            }
+            if (mChargingVoltage > 0) {
+                chargingDetails.add(String.format(Locale.US, "%.1f",
+                        (mChargingVoltage / 1000000f)) + "V");
+            }
+            if (mTemperature > 0) {
+                chargingDetails.add(String.format(Locale.US, "%.1f",
+                        (mTemperature / 10f)) + "°C");
+            }
+            if (!chargingDetails.isEmpty()) {
+                batteryInfo = "\n" + TextUtils.join(" · ", chargingDetails);
+            }
         }
 
         if (hasChargingTime) {
