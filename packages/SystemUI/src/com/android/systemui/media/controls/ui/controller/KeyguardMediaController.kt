@@ -74,6 +74,7 @@ import java.io.PrintWriter
 import javax.inject.Inject
 import javax.inject.Named
 import kotlinx.coroutines.CoroutineDispatcher
+import com.android.systemui.axdynamicbar.domain.AxDynamicBarSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -107,6 +108,7 @@ constructor(
     private val mediaCarouselInteractor: MediaCarouselInteractor,
     private val falsingSystem: MediaFalsingSystem,
     private val secureSettings: SecureSettings,
+    private val axDynamicBarSettings: AxDynamicBarSettings,
 ) : Dumpable {
     private var lastUsedStatusBarState = -1
 
@@ -146,6 +148,16 @@ constructor(
     private fun setUpListenersAndCallbacks() {
         if (SceneContainerFlag.isEnabled) return
 
+        val isDynamicBarMediaAvailableFlow =
+            combine(
+                axDynamicBarSettings.isEnabled,
+                axDynamicBarSettings.isKeyguardEnabled,
+                axDynamicBarSettings.isKeyguardHideMediaPlayer,
+                axDynamicBarSettings.disabledEventTypes,
+            ) { dynEnabled, dynKgEnabled, hideMedia, disabledEvents ->
+                dynEnabled && dynKgEnabled && hideMedia && "media" !in disabledEvents
+            }
+
         if (!MediaControlsInComposeFlag.isEnabled) {
             // First let's set the desired state that we want for this host
             mediaHost.expansion = MediaHostState.EXPANDED
@@ -161,14 +173,20 @@ constructor(
                         mediaCarouselInteractor.allowMediaOnLockscreen,
                         mediaCarouselInteractor.hasActiveMedia,
                         mediaCarouselInteractor.isOnLockscreen,
-                    ) { allowMediaOnLockscreen, activeMedia, isOnLockscreen ->
-                        if (allowMediaOnLockscreen && isOnLockscreen) {
+                        isDynamicBarMediaAvailableFlow,
+                    ) { allowMediaOnLockscreen, activeMedia, isOnLockscreen, dynAvailable ->
+                        if (allowMediaOnLockscreen && isOnLockscreen && !dynAvailable) {
                             activeMedia
                         } else {
                             false
                         }
                     }
                     .collect { isMediaVisibleOnLockscreen = it }
+            }
+        }
+        applicationScope.launch {
+            isDynamicBarMediaAvailableFlow.distinctUntilChanged().collect {
+                refreshMediaPosition(reason = "AxDynamicBarSettings changed")
             }
         }
         statusBarStateController.addCallback(
@@ -379,11 +397,13 @@ constructor(
         val isBypassNotEnabled = !bypassController.bypassEnabled
         val useSplitShade = useSplitShade
         val shouldBeVisibleForSplitShade = shouldBeVisibleForSplitShade()
+        val isDynamicBarMediaAvailable = isDynamicBarKeyguardMediaAvailable()
         visible =
             isMediaHostVisible &&
                 isBypassNotEnabled &&
                 keyguardOrUserSwitcher &&
-                shouldBeVisibleForSplitShade
+                shouldBeVisibleForSplitShade &&
+                !isDynamicBarMediaAvailable
         logger.logRefreshMediaPosition(
             reason = reason,
             visible = visible,
@@ -459,6 +479,12 @@ constructor(
             currentMediaContainer.visibility = newVisibility
         }
     }
+
+    private fun isDynamicBarKeyguardMediaAvailable(): Boolean =
+        axDynamicBarSettings.isEnabled.value &&
+            axDynamicBarSettings.isKeyguardEnabled.value &&
+            axDynamicBarSettings.isKeyguardHideMediaPlayer.value &&
+            "media" !in axDynamicBarSettings.disabledEventTypes.value
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
         pw.asIndenting().run {
