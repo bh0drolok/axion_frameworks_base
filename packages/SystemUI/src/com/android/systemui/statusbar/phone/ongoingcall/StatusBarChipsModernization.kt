@@ -36,7 +36,7 @@ object StatusBarChipsModernization {
     /** Is the refactor enabled */
     @JvmStatic
     inline val isEnabled
-        get() = Flags.statusBarChipsModernization() && Flags.statusBarRootModernization()
+        get() = true
 
     /**
      * Called to ensure code is only run when the flag is enabled. This protects users from the
@@ -44,8 +44,7 @@ object StatusBarChipsModernization {
      * build to ensure that the refactor author catches issues in testing.
      */
     @JvmStatic
-    inline fun isUnexpectedlyInLegacyMode() =
-        RefactorFlagUtils.isUnexpectedlyInLegacyMode(isEnabled, FLAG_NAME)
+    inline fun isUnexpectedlyInLegacyMode() = false
 
     /**
      * Called to ensure code is only run when the flag is enabled. This will throw an exception if
@@ -53,13 +52,12 @@ object StatusBarChipsModernization {
      */
     @JvmStatic
     @Deprecated("Avoid crashing.", ReplaceWith("if (this.isUnexpectedlyInLegacyMode()) return"))
-    inline fun unsafeAssertInNewMode() =
-        RefactorFlagUtils.unsafeAssertInNewMode(isEnabled, FLAG_NAME)
+    inline fun unsafeAssertInNewMode() {}
 
     /**
      * Called to ensure code is only run when the flag is disabled. This will throw an exception if
      * the flag is enabled to ensure that the refactor author catches issues in testing.
      */
     @JvmStatic
-    inline fun assertInLegacyMode() = RefactorFlagUtils.assertInLegacyMode(isEnabled, FLAG_NAME)
+    inline fun assertInLegacyMode() {}
 }

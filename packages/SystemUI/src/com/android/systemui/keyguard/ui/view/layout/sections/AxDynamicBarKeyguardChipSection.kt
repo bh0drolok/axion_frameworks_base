@@ -88,16 +88,15 @@ constructor(
                         lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
                         lp.topMargin = 0
                         
-                        lp.bottomToBottom = R.id.start_button
+                        lp.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                        lp.bottomMargin = context.resources.getDimensionPixelSize(com.android.internal.R.dimen.status_bar_height)
+                        lp.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                        lp.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                        
                         lp.topToTop = -1
-                        
-                        lp.startToEnd = R.id.start_button
-                        lp.endToStart = R.id.end_button
-                        lp.bottomMargin = 0
-                        
                         lp.bottomToTop = -1
-                        lp.startToStart = -1
-                        lp.endToEnd = -1
+                        lp.startToEnd = -1
+                        lp.endToStart = -1
                         lp.topToBottom = -1
                     }
                     composeView.layoutParams = lp
@@ -122,10 +121,10 @@ constructor(
                 constrainWidth(chipViewId, ViewGroup.LayoutParams.WRAP_CONTENT)
                 constrainHeight(chipViewId, ViewGroup.LayoutParams.WRAP_CONTENT)
                 
-                connect(chipViewId, ConstraintSet.BOTTOM, R.id.start_button, ConstraintSet.BOTTOM)
-                
-                connect(chipViewId, ConstraintSet.START, R.id.start_button, ConstraintSet.END)
-                connect(chipViewId, ConstraintSet.END, R.id.end_button, ConstraintSet.START)
+                val bottomMargin = context.resources.getDimensionPixelSize(com.android.internal.R.dimen.status_bar_height)
+                connect(chipViewId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, bottomMargin)
+                connect(chipViewId, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+                connect(chipViewId, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
             }
         }
     }

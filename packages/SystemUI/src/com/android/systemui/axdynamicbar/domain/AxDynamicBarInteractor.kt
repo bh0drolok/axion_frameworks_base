@@ -513,7 +513,12 @@ constructor(
     override fun switchToApp(taskId: Int) = repository.appTracking.switchToApp(taskId)
 
     fun onPanelExpandedChanged(expanded: Boolean) {
-        panelBlocking = expanded
+        val blocking = if (_isOnKeyguard.value) {
+            shadeInteractor.isQsExpanded.value
+        } else {
+            expanded
+        }
+        panelBlocking = blocking
         _isPanelExpanded.value = expanded
         if (expanded) dismissNotificationAlert()
         updateChipVisibility()
