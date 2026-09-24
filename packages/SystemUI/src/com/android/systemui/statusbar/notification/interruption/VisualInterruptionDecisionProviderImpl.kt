@@ -77,7 +77,6 @@ constructor(
     @ShadeDisplayAware private val context: Context,
     private val notificationManager: NotificationManager,
     private val settingsInteractor: NotificationSettingsInteractor,
-    private val axDynamicBarSettings: AxDynamicBarSettings,
 ) : VisualInterruptionDecisionProvider {
 
     init {
@@ -169,7 +168,6 @@ constructor(
         check(!started)
 
         addCondition(PeekDisabledSuppressor(globalSettings, headsUpManager, logger, mainHandler))
-        addCondition(PeekAxDynamicBarSuppressor(axDynamicBarSettings))
         addCondition(PulseDisabledSuppressor(ambientDisplayConfiguration, userTracker))
         addCondition(PulseBatterySaverSuppressor(batteryController))
         addFilter(PeekPackageSnoozedSuppressor(headsUpManager))

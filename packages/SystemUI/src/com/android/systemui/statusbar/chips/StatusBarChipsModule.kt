@@ -22,7 +22,10 @@ import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.LogBufferFactory
 import com.android.systemui.statusbar.chips.notification.domain.interactor.StatusBarNotificationChipsInteractor
 import com.android.systemui.statusbar.chips.notification.shared.StatusBarNotifChips
+import com.android.systemui.axdynamicbar.domain.AxDynamicBarChipsRefiner
 import com.android.systemui.statusbar.chips.ui.viewmodel.OngoingActivityChipsRefiner
+import dagger.Binds
+import dagger.multibindings.IntoSet
 import dagger.Lazy
 import dagger.Module
 import dagger.Provides
@@ -56,6 +59,11 @@ abstract class StatusBarChipsModule {
     }
 
     /** Provides the base empty set for [OngoingActivityChipsRefiner]. */
+    /** Provides the base empty set for [OngoingActivityChipsRefiner]. */
     @Multibinds
     abstract fun provideOngoingActivityChipRefinerSet(): Set<OngoingActivityChipsRefiner>
+
+    @Binds
+    @IntoSet
+    abstract fun bindAxDynamicBarChipsRefiner(impl: AxDynamicBarChipsRefiner): OngoingActivityChipsRefiner
 }

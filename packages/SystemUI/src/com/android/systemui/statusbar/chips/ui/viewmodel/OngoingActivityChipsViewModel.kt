@@ -284,26 +284,25 @@ constructor(
     private val unrefinedChips =
         if (StatusBarChipsModernization.isEnabled) {
             combine(
-                    incomingChipBundle.map { bundle -> rankChips(bundle) },
-                    isScreenReasonablyLarge,
-                ) { rankedChips, isScreenReasonablyLarge ->
-                    if (
-                        StatusBarNotifChips.isEnabled &&
-                            !isScreenReasonablyLarge &&
-                            rankedChips.active.filter { !it.isHidden }.size >= 2
-                    ) {
-                        // If we have at least two showing chips and we don't have a ton of room
-                        // (!isScreenReasonablyLarge), then we want to make both of them as small as
-                        // possible so that we have the highest chance of showing both chips (as
-                        // opposed to showing the first chip with a lot of text and completely
-                        // hiding the other chips).
-                        val squishedActiveChips =
-                            rankedChips.active.map {
-                                if (!it.isHidden && it.shouldSquish()) {
-                                    it.toIconOnly()
-                                } else {
-                                    it
-                                }
+                incomingChipBundle.map { bundle -> rankChips(bundle) },
+                isScreenReasonablyLarge,
+            ) { rankedChips, isScreenReasonablyLarge ->
+                if (
+                    StatusBarNotifChips.isEnabled &&
+                        !isScreenReasonablyLarge &&
+                        rankedChips.active.filter { !it.isHidden }.size >= 2
+                ) {
+                    // If we have at least two showing chips and we don't have a ton of room
+                    // (!isScreenReasonablyLarge), then we want to make both of them as small as
+                    // possible so that we have the highest chance of showing both chips (as
+                    // opposed to showing the first chip with a lot of text and completely
+                    // hiding the other chips).
+                    val squishedActiveChips =
+                        rankedChips.active.map {
+                            if (!it.isHidden && it.shouldSquish()) {
+                                it.toIconOnly()
+                            } else {
+                                it
                             }
                         }
 

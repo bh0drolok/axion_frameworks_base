@@ -5,10 +5,9 @@ import com.android.systemui.axdynamicbar.model.IslandEvent
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
-import com.android.systemui.statusbar.chips.casttootherdevice.domain.interactor.MediaRouterChipInteractor
-import com.android.systemui.statusbar.chips.casttootherdevice.domain.model.MediaRouterCastModel
 import com.android.systemui.statusbar.policy.BluetoothController
 import com.android.systemui.statusbar.policy.HotspotController
+import com.android.systemui.statusbar.policy.SecurityController
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -26,7 +25,7 @@ constructor(
     @Background private val backgroundDispatcher: CoroutineDispatcher,
     private val bluetoothController: BluetoothController,
     private val hotspotController: HotspotController,
-    private val mediaRouterChipInteractor: MediaRouterChipInteractor,
+    private val securityController: SecurityController,
 ) {
     companion object {
         private const val TAG = "ConnectivityIslandManager"
@@ -38,15 +37,12 @@ constructor(
     private val _hotspotEvent = MutableStateFlow<IslandEvent.Hotspot?>(null)
     val hotspotEvent: StateFlow<IslandEvent.Hotspot?> = _hotspotEvent.asStateFlow()
 
-    private val _castingEvent = MutableStateFlow<IslandEvent.Casting?>(null)
-    val castingEvent: StateFlow<IslandEvent.Casting?> = _castingEvent.asStateFlow()
-
     private val _vpnEvent = MutableStateFlow<IslandEvent.Vpn?>(null)
     val vpnEvent: StateFlow<IslandEvent.Vpn?> = _vpnEvent.asStateFlow()
 
     private val previousBtAddresses = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private var listening = false
-    private var castJob: Job? = null
+    private var wasVpnEnabled = false
 
     private val bluetoothCallback =
         object : BluetoothController.Callback {
@@ -102,24 +98,35 @@ constructor(
             }
         }
 
-    private fun startCastListener() {
-        castJob?.cancel()
-        castJob =
-            applicationScope.launch(backgroundDispatcher) {
-                mediaRouterChipInteractor.mediaRouterCastingState.collect { state ->
-                    _castingEvent.value =
-                        when (state) {
-                            is MediaRouterCastModel.Casting ->
-                                IslandEvent.Casting(deviceName = state.deviceName ?: "Screen")
-                            is MediaRouterCastModel.DoingNothing -> null
-                        }
-                }
+    private val securityCallback =
+        SecurityController.SecurityControllerCallback {
+            val isVpnEnabled = securityController.isVpnEnabled
+            if (isVpnEnabled) {
+                val existing = _vpnEvent.value
+                val isBranded = securityController.isVpnBranded
+                val isValidated = securityController.isVpnValidated
+                _vpnEvent.value =
+                    if (existing != null) {
+                        existing.copy(
+                            isBranded = isBranded,
+                            isValidated = isValidated,
+                        )
+                    } else {
+                        IslandEvent.Vpn(
+                            isBranded = isBranded,
+                            isValidated = isValidated,
+                        )
+                    }
+            } else {
+                _vpnEvent.value = null
             }
-    }
+            wasVpnEnabled = isVpnEnabled
+        }
+
+
 
     private var btListening = false
     private var hotspotListening = false
-    private var castListening = false
     private var vpnListening = false
 
     fun startBluetooth() {
@@ -154,28 +161,17 @@ constructor(
         _hotspotEvent.value = null
     }
 
-    fun startCast() {
-        if (castListening) return
-        castListening = true
-        startCastListener()
-    }
-
-    fun stopCast() {
-        if (!castListening) return
-        castListening = false
-        castJob?.cancel()
-        castJob = null
-        _castingEvent.value = null
-    }
-
     fun startVpn() {
         if (vpnListening) return
         vpnListening = true
+        securityController.addCallback(securityCallback)
+        securityCallback.onStateChanged()
     }
 
     fun stopVpn() {
         if (!vpnListening) return
         vpnListening = false
+        securityController.removeCallback(securityCallback)
         _vpnEvent.value = null
     }
 
@@ -184,7 +180,6 @@ constructor(
         listening = true
         startBluetooth()
         startHotspot()
-        startCast()
         startVpn()
     }
 
@@ -193,7 +188,6 @@ constructor(
         listening = false
         stopBluetooth()
         stopHotspot()
-        stopCast()
         stopVpn()
     }
 
@@ -213,10 +207,6 @@ constructor(
 
     fun clearHotspot() {
         _hotspotEvent.value = null
-    }
-
-    fun clearCasting() {
-        _castingEvent.value = null
     }
 
     fun clearVpn() {

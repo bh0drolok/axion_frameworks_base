@@ -164,6 +164,16 @@ class ScrimUtils private constructor() {
     fun isPulsing(): Boolean = mPulsing.get()
     fun isKeyguardShowing(): Boolean = mKeyguardShowing == true
 
+    private val preDrawActions = java.util.concurrent.CopyOnWriteArrayList<Runnable>()
+
+    fun addKeyguardPreDrawAction(action: Runnable) {
+        if (!preDrawActions.contains(action)) preDrawActions.add(action)
+    }
+
+    fun removeKeyguardPreDrawAction(action: Runnable) {
+        preDrawActions.remove(action)
+    }
+
     fun isPanelFullyCollapsed(): Boolean =
         if (mStateIsKeyguard) {
             !mQsVisible.get()
