@@ -261,89 +261,106 @@ private fun KeyguardMediaPanel(event: IslandEvent.Media, interactor: IslandActio
             .padding(horizontal = SpaceSection),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
+        Surface(
             modifier = Modifier
                 .weight(1f, fill = true)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .border(1.dp, CardBorderBrush, ShapeCard),
+            shape = ShapeCard,
+            color = CardBg,
         ) {
-            AnimatedContent(
-                targetState = event,
-                transitionSpec = {
-                    fadeIn(motionScheme.defaultEffectsSpec()) togetherWith
-                        fadeOut(motionScheme.fastEffectsSpec()) using
-                        SizeTransform(clip = false)
-                },
-                contentKey = { iconKeyFor(it) },
-                label = "kg_media_album_art",
-            ) { media ->
-                val art = media.albumArt
-                if (art != null) {
-                    Image(
-                        bitmap = art.toScaledBitmap(SizeAlbumLg),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .aspectRatio(1f)
-                            .clip(ShapeLg),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .aspectRatio(1f)
-                            .clip(ShapeLg)
-                            .background(colors.tonal),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Filled.MusicNote, null, tint = colors.accent.copy(AlphaDisabled), modifier = Modifier.size(SpacePanelLarge))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colors.accent.copy(alpha = 0.12f))
+                    .padding(top = SpaceLg, start = SpaceLg, end = SpaceLg, bottom = SpaceSm),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f, fill = true)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    AnimatedContent(
+                        targetState = event,
+                        transitionSpec = {
+                            fadeIn(motionScheme.defaultEffectsSpec()) togetherWith
+                                fadeOut(motionScheme.fastEffectsSpec()) using
+                                SizeTransform(clip = false)
+                        },
+                        contentKey = { iconKeyFor(it) },
+                        label = "kg_media_album_art",
+                    ) { media ->
+                        val art = media.albumArt
+                        if (art != null) {
+                            Image(
+                                bitmap = art.toScaledBitmap(SizeAlbumLg),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxHeight(0.85f)
+                                    .aspectRatio(1f)
+                                    .clip(ShapeLg),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight(0.85f)
+                                    .aspectRatio(1f)
+                                    .clip(ShapeLg)
+                                    .background(colors.tonal),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.Filled.MusicNote, null, tint = colors.accent.copy(AlphaDisabled), modifier = Modifier.size(SpacePanelLarge))
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        Spacer(Modifier.height(SpaceLg))
+                Spacer(Modifier.height(SpaceSm))
 
-        val trackText = event.track.ifEmpty { stringResource(R.string.ax_dynamic_bar_now_playing) }
-        AnimatedContent(
-            targetState = trackText,
-            transitionSpec = {
-                fadeIn(motionScheme.defaultEffectsSpec()) togetherWith
-                    fadeOut(motionScheme.fastEffectsSpec()) using
-                    SizeTransform(clip = false)
-            },
-            label = "kg_media_track",
-        ) { title ->
-            Text(
-                title,
-                color = Color.White,
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+                val trackText = event.track.ifEmpty { stringResource(R.string.ax_dynamic_bar_now_playing) }
+                AnimatedContent(
+                    targetState = trackText,
+                    transitionSpec = {
+                        fadeIn(motionScheme.defaultEffectsSpec()) togetherWith
+                            fadeOut(motionScheme.fastEffectsSpec()) using
+                            SizeTransform(clip = false)
+                    },
+                    label = "kg_media_track",
+                ) { title ->
+                    Text(
+                        title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
-        if (event.artist.isNotEmpty()) {
-            Spacer(Modifier.height(SpaceMd))
-            AnimatedContent(
-                targetState = event.artist,
-                transitionSpec = {
-                    fadeIn(motionScheme.defaultEffectsSpec()) togetherWith
-                        fadeOut(motionScheme.fastEffectsSpec()) using
-                        SizeTransform(clip = false)
-                },
-                label = "kg_media_artist",
-            ) { artist ->
-                Text(
-                    artist,
-                    color = Color.White.copy(alpha = AlphaSecondary),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (event.artist.isNotEmpty()) {
+                    Spacer(Modifier.height(SpaceSm))
+                    AnimatedContent(
+                        targetState = event.artist,
+                        transitionSpec = {
+                            fadeIn(motionScheme.defaultEffectsSpec()) togetherWith
+                                fadeOut(motionScheme.fastEffectsSpec()) using
+                                SizeTransform(clip = false)
+                        },
+                        label = "kg_media_artist",
+                    ) { artist ->
+                        Text(
+                            artist,
+                            color = Color.White.copy(alpha = AlphaSecondary),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
 
