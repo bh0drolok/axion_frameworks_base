@@ -49,25 +49,23 @@ constructor(
             .distinctUntilChanged()
 
     val canShow: StateFlow<Boolean> = run {
-        val contextAndDoze =
+        val notBlocked =
             combine(
                 interactor.isOnKeyguard,
                 interactor.isDozing,
                 interactor.dozeAmount.map { it > 0f }.distinctUntilChanged(),
                 interactor.qsExpansion.map { it > 0f }.distinctUntilChanged(),
-                interactor.isPanelExpanded,
-            ) { onKg, dozing, dozeAmt, qs, panelExp ->
-                onKg && !dozing && !dozeAmt && !qs && !panelExp
+            ) { onKg, dozing, dozeAmt, qs ->
+                onKg && !dozing && !dozeAmt && !qs
             }
-        val shadeAndBouncer =
+        val keyguardReady =
             combine(
                 interactor.isBouncerShowing,
-                interactor.legacyShadeExpansion.map { it >= 0.95f }.distinctUntilChanged(),
                 hasChip,
-            ) { bouncer, shadeFull, chip ->
-                !bouncer && shadeFull && chip
+            ) { bouncer, chip ->
+                !bouncer && chip
             }
-        combine(contextAndDoze, shadeAndBouncer) { a, b -> a && b }
+        combine(notBlocked, keyguardReady) { a, b -> a && b }
             .distinctUntilChanged()
             .stateIn(applicationScope, SharingStarted.Eagerly, false)
     }
@@ -85,13 +83,13 @@ constructor(
     }
 
     init {
-        interactor.isOnKeyguard
+        canShow
             .onEach { if (!it) collapse() }
             .launchIn(applicationScope)
     }
 
     fun expand() {
-        if (interactor.uiState.value.topEvent == null) return
+        if (!canShow.value) return
         _intent.value = true
     }
 
