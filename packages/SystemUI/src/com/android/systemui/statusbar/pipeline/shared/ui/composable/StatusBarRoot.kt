@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -206,7 +208,7 @@ fun StatusBarRoot(
                                             axDynamicBarChipViewModel.interactor.settings.isEnabled
                                                 .collectAsState()
                                         if (axEnabled) {
-                                            AxDynamicBarChip(viewModel = axDynamicBarChipViewModel)
+                                            AxDynamicBarChip(viewModel = axDynamicBarChipViewModel, modifier = Modifier.padding(start = 6.dp))
                                         }
                                         val chipsVisibilityModel =
                                             statusBarViewModel.ongoingActivityChips
