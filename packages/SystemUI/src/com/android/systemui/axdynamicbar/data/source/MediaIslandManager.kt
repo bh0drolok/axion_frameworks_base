@@ -17,11 +17,9 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @SysUISingleton
@@ -37,7 +35,6 @@ constructor(
     companion object {
         private const val TAG = "MediaIslandManager"
         private const val DEFAULT_OUTPUT_DEVICE = "Speaker"
-        private const val PAUSE_DISMISS_TIMEOUT_MS = 5000L
     }
 
     private val _mediaEvent = MutableStateFlow<IslandEvent.Media?>(null)
@@ -57,17 +54,11 @@ constructor(
     fun startListening() {
         if (!isListening.compareAndSet(false, true)) return
         val job = applicationScope.launch {
-            mediaSessionManager.activeSession.collectLatest { session ->
-                if (session == null || session.isResumption) {
-                    _mediaEvent.value = null
-                    sessionLostListener.get()?.invoke()
-                    return@collectLatest
-                }
+            mediaSessionManager.activeSession.collect { session ->
                 val media = mapSessionToIslandMedia(session)
                 _mediaEvent.value = media
-                if (!session.isPlaying) {
-                    delay(PAUSE_DISMISS_TIMEOUT_MS)
-                    _mediaEvent.value = null
+                if (session == null) {
+                    sessionLostListener.get()?.invoke()
                 }
             }
         }
@@ -85,7 +76,7 @@ constructor(
     }
 
     private fun mapSessionToIslandMedia(session: ResolvedMediaSession?): IslandEvent.Media? {
-        if (session == null || session.isResumption) return null
+        if (session == null) return null
         if (session.track.isEmpty() && session.artist.isEmpty()) return null
 
         val outputDevice = session.outputDevice?.name?.toString() ?: DEFAULT_OUTPUT_DEVICE
