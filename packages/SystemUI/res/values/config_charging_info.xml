@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Charging info current divider. Some devices report mA instead of uA. -->
+    <integer name="config_currentInfoDivider" translatable="false">1000</integer>
+</resources>

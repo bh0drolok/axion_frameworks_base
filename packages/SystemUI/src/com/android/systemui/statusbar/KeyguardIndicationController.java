@@ -73,6 +73,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.UserHandle;
+import android.provider.Settings;
 import android.os.UserManager;
 import android.text.TextUtils;
 import android.text.format.Formatter;
@@ -236,6 +237,10 @@ public class KeyguardIndicationController {
     private boolean mBatteryDead;
     private boolean mIncompatibleCharger;
     private int mChargingWattage;
+    private int mChargingCurrent;
+    private int mChargingVoltage;
+    private int mTemperature;
+    private int mCurrentDivider = 1000;
     private int mBatteryLevel = -1;
     private boolean mBatteryPresent = true;
     protected long mChargingTimeRemaining;
@@ -1523,6 +1528,14 @@ public class KeyguardIndicationController {
             mPowerPluggedIn = isPowerPluggedIn(status, isChargingOrFull);
             mPowerCharged = status.isCharged();
             mChargingWattage = status.maxChargingWattage;
+            mChargingCurrent = status.maxChargingCurrent;
+            mChargingVoltage = status.maxChargingVoltage;
+            mTemperature = status.temperature;
+            mCurrentDivider = mContext.getResources().getInteger(
+                    R.integer.config_currentInfoDivider);
+            if (mCurrentDivider <= 0) {
+                mCurrentDivider = 1000;
+            }
             mChargingSpeed = status.getChargingSpeed(mContext);
             mChargingStatus = status.chargingStatus;
             mBatteryLevel = status.level;

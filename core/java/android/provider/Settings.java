@@ -4412,6 +4412,12 @@ public final class Settings {
      * functions for accessing individual settings entries.
      */
     public static final class System extends NameValueTable {
+        /**
+         * Whether to show the charging info on the lockscreen while charging
+         * @hide
+         */
+        public static final String LOCKSCREEN_CHARGING_INFO = "lockscreen_charging_info";
+
         // NOTE: If you add new settings here, be sure to add them to
         // com.android.providers.settings.SettingsProtoDumpUtil#dumpProtoSystemSettingsLocked.
 
