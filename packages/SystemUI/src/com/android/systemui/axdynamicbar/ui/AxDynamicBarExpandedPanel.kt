@@ -342,8 +342,6 @@ private fun ExpandedPanelDialogContentBody(viewModel: AxDynamicBarChipViewModel)
                     onScrollableOverflowChanged = { panelHasScrollableOverflow = it },
                     pinnedEventId = pinnedEventId,
                     hapticsViewModelFactory = viewModel.interactor.sliderHapticsViewModelFactory,
-                    axMediaViewModel = viewModel.axMediaViewModel,
-                    mediaViewModelFactory = viewModel.mediaViewModelFactory,
                 )
             }
         }

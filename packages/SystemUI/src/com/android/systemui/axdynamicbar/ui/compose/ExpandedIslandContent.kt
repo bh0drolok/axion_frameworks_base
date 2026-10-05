@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -33,8 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import android.app.Notification
-import android.service.notification.StatusBarNotification
 import com.android.compose.animation.scene.ContentKey
 import com.android.compose.animation.scene.ElementKey
 import com.android.compose.animation.scene.ElementMatcher
@@ -44,12 +41,6 @@ import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.animation.scene.transitions
 import com.android.systemui.axdynamicbar.shared.IslandActions
 import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
-import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
-import com.android.systemui.qs.ax.shared.model.AxMediaSurface
-import com.android.systemui.qs.ax.shared.model.AxQsSpan
-import com.android.systemui.qs.ax.ui.media.AxMediaPanel
-import com.android.systemui.qs.ax.ui.media.nonQsGridMediaHeight
-import com.android.systemui.qs.ax.ui.viewmodel.AxMediaViewModel
 import kotlinx.coroutines.delay
 import com.android.systemui.axdynamicbar.model.IslandEvent
 import com.android.systemui.axdynamicbar.shared.*
@@ -67,26 +58,18 @@ fun ExpandedIslandContent(
     expandedFilter: String? = null,
     pinnedEventId: String? = null,
     hapticsViewModelFactory: SliderHapticsViewModel.Factory,
-    axMediaViewModel: AxMediaViewModel? = null,
-    mediaViewModelFactory: MediaViewModel.Factory? = null,
 ) {
     if (events.isEmpty()) return
 
     val filteredEvents =
         remember(events, expandedFilter, pinnedEventId) {
-            val nonMediaEvents = events.filter { event ->
-                when (event) {
-                    is IslandEvent.Notification -> !isMediaNotification(event.sbn)
-                    is IslandEvent.PromotedOngoing -> !isMediaNotification(event.sbn)
-                    else -> true
-                }
-            }
             if (expandedFilter != null) {
-                nonMediaEvents.filter {
+                events.filter {
                     EVENT_TYPE_IDS[it::class.java] == expandedFilter
                 }
             } else {
-                val base = nonMediaEvents.filter { it !is IslandEvent.Notification }
+
+                val base = events.filter { it !is IslandEvent.Notification }
                 val pinned = base.find { it.id == pinnedEventId }
                 if (pinned != null) {
                     listOf(pinned) + base.filter { it.id != pinned.id }
@@ -195,30 +178,17 @@ fun ExpandedIslandContent(
             }
         } else {
             items(filteredEvents, key = { it.id }) { event ->
-                if (event is IslandEvent.Media && axMediaViewModel != null) {
-                    AxMediaPanel(
-                        viewModel = axMediaViewModel,
-                        span = AxQsSpan(columns = 4, rows = 2),
-                        mediaViewModelFactory = mediaViewModelFactory,
-                        surface = AxMediaSurface.DYNAMIC_BAR,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(nonQsGridMediaHeight)
-                            .animateItem(
-                                fadeInSpec = itemFadeInSpec,
-                                placementSpec = itemPlacementSpec,
-                                fadeOutSpec = itemFadeOutSpec,
-                            ),
-                    )
-                } else {
-                    MagneticSwipeToDismiss(
-                        onDismiss = { interactor.dismissEvent(event) },
-                        modifier = Modifier.animateItem(
-                            fadeInSpec = itemFadeInSpec,
-                            placementSpec = itemPlacementSpec,
-                            fadeOutSpec = itemFadeOutSpec,
-                        ),
-                    ) {
+                MagneticSwipeToDismiss(
+                    onDismiss = { interactor.dismissEvent(event) },
+                    modifier = Modifier.animateItem(
+                        fadeInSpec = itemFadeInSpec,
+                        placementSpec = itemPlacementSpec,
+                        fadeOutSpec = itemFadeOutSpec,
+                    ),
+                ) {
+                    if (event is IslandEvent.Media) {
+                        MediaCard(event, interactor)
+                    } else {
                         PrimaryCard {
                             ExpandedEventSceneContent(event, interactor, hapticsViewModelFactory)
                         }
@@ -272,7 +242,7 @@ private object ExpandedEventScenes {
     )
 }
 
-internal object ExpandedEventElements {
+private object ExpandedEventElements {
     val AudioRecordingContent = ElementKey("ax_dynamic_bar_expanded_audio_recording_content")
     val PromotedOngoingContent = ElementKey("ax_dynamic_bar_expanded_promoted_ongoing_content")
     val SportsContent = ElementKey("ax_dynamic_bar_expanded_sports_content")
@@ -452,11 +422,4 @@ internal fun PrimaryCard(content: @Composable () -> Unit) {
     ) {
         content()
     }
-}
-
-private fun isMediaNotification(sbn: StatusBarNotification): Boolean {
-    val notification = sbn.notification ?: return false
-    return notification.isMediaNotification() ||
-        notification.category == Notification.CATEGORY_TRANSPORT ||
-        notification.extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true
 }
