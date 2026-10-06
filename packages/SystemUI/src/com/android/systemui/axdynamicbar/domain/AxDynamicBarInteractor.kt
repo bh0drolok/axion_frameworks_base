@@ -408,7 +408,11 @@ constructor(
         activityStarter.postStartActivityDismissingKeyguard(
             intent,
             0,
-            expandable?.activityTransitionController(Cuj.CUJ_SHADE_APP_LAUNCH_FROM_MEDIA_PLAYER),
+            expandable?.let {
+                runCatching {
+                    it.activityTransitionController(Cuj.CUJ_SHADE_APP_LAUNCH_FROM_MEDIA_PLAYER)
+                }.getOrNull()
+            },
         )
     }
 
