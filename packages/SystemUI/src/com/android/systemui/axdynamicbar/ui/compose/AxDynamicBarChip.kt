@@ -170,11 +170,7 @@ private fun AxDynamicBarChipContent(
                                     )
                                     }
                                 } else {
-                                    viewModel.statusBarExpansion.toggle(
-                                        com.android.systemui.animation.Expandable(
-                                            expandableController.transitionSource
-                                        )
-                                    )
+                                    viewModel.statusBarExpansion.toggle(boundsExpandable)
                                 }
                             }
                             
