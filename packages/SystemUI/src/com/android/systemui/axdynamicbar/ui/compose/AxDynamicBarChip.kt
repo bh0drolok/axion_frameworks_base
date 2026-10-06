@@ -162,11 +162,19 @@ private fun AxDynamicBarChipContent(
                                 change.consume()
                                 val current = state?.event
                                 if (current is IslandEvent.AospChip) {
-                                    if (!viewModel.handleAospChipTap(current, expandableController.expandable)) {
-                                        viewModel.statusBarExpansion.toggle(boundsExpandable)
+                                    if (!viewModel.handleAospChipTap(current, com.android.systemui.animation.Expandable(expandableController.transitionSource))) {
+                                        viewModel.statusBarExpansion.toggle(
+                                        com.android.systemui.animation.Expandable(
+                                            expandableController.transitionSource
+                                        )
+                                    )
                                     }
                                 } else {
-                                    viewModel.statusBarExpansion.toggle(boundsExpandable)
+                                    viewModel.statusBarExpansion.toggle(
+                                        com.android.systemui.animation.Expandable(
+                                            expandableController.transitionSource
+                                        )
+                                    )
                                 }
                             }
                             

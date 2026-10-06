@@ -132,7 +132,9 @@ constructor(
         }
         currentDialog = dialog
 
-        expandable?.dialogTransitionController()?.let { controller ->
+        expandable
+            ?.let { runCatching { it.dialogTransitionController() }.getOrNull() }
+            ?.let { controller ->
             dialogTransitionAnimator.show(dialog, controller, animateBackgroundBoundsChange = true)
             installDialogOutsideTouchHandler(dialog)
         }
