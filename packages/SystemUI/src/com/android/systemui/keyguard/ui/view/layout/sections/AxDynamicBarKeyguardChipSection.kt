@@ -4,7 +4,7 @@ import android.content.Context
 import android.transition.TransitionManager
 import android.view.View
 import android.view.ViewGroup
-import com.android.axion.compose.host.AxComposeView
+import androidx.compose.ui.platform.ComposeView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.Lifecycle
@@ -18,6 +18,7 @@ import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.keyguard.ui.clocks.ClockViewIds
 import com.android.systemui.res.R
+import com.android.systemui.shared.R as sharedR
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.KeyguardIndicationController
 import com.android.systemui.util.ScrimUtils
@@ -36,8 +37,11 @@ private val HIDDEN_VIEW_IDS = listOf(
     ClockViewIds.LOCKSCREEN_CLOCK_VIEW_SMALL,
     ClockViewIds.LOCKSCREEN_CLOCK_VIEW_LARGE,
     R.id.shared_notification_container,
-    R.id.keyguard_widgets_area,
     R.id.notificationShelf,
+    sharedR.id.date_smartspace_view,
+    sharedR.id.date_smartspace_view_large,
+    sharedR.id.bc_smartspace_view,
+    R.id.keyguard_slice_view,
 )
 
 
@@ -60,12 +64,12 @@ constructor(
     private val hiddenOriginalVisibility = mutableMapOf<Int, Int>()
 
     override fun addViews(constraintLayout: ConstraintLayout) {
-        val composeView = AxComposeView(context).apply { id = chipViewId }
+        val composeView = ComposeView(context).apply { id = chipViewId }
         constraintLayout.addView(composeView)
     }
 
     override fun bindData(constraintLayout: ConstraintLayout) {
-        val composeView: AxComposeView = constraintLayout.requireViewById(chipViewId)
+        val composeView: ComposeView = constraintLayout.requireViewById(chipViewId)
 
         if (viewModel.isEnabled.value && viewModel.isKeyguardEnabled.value && viewModel.isOnKeyguard.value) {
             indicationController.setSuppressIndication(true)
