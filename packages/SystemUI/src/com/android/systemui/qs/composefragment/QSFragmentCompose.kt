@@ -185,10 +185,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.compose.PlatformSliderDefaults
 import com.android.settingslib.volume.shared.model.AudioStream
 import com.android.systemui.volume.panel.component.volume.domain.model.SliderType
 import com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel.AudioStreamSliderViewModel
+import com.android.systemui.volume.VolumePanelDialogReceiver
 import com.android.systemui.volume.panel.component.volume.ui.composable.VolumeSlider
 
 @SuppressLint("ValidFragment")
@@ -999,14 +1005,18 @@ constructor(
                         sliderColors = PlatformSliderDefaults.defaultPlatformSliderColors(),
                         hapticsViewModelFactory = vm.getSliderHapticsViewModelFactory(),
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(10.dp))
                     IconButton(
                         onClick = {
-                            context.startActivity(
-                                Intent(Settings.ACTION_SOUND_SETTINGS)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.sendBroadcast(
+                                Intent(VolumePanelDialogReceiver.LAUNCH_ACTION)
+                                    .setPackage(context.packageName)
                             )
-                        }
+                        },
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(LocalAndroidColorScheme.current.surfaceEffect1),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.horizontal_ellipsis),
