@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
-import com.android.axion.compose.theme.rememberAxionTypography
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.material3.Icon
@@ -192,7 +192,7 @@ internal val TsMono: TextStyle
 internal fun AxDynamicBarTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme,
-        typography = rememberAxionTypography(),
+        typography = MaterialTheme.typography,
         motionScheme = MaterialTheme.motionScheme,
         content = content,
     )

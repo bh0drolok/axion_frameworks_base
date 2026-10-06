@@ -200,16 +200,7 @@ private fun AospChipPillIcon(
                     modifier = Modifier.size(SizeBadge),
                 )
             }
-            is OngoingActivityChipModel.ChipIcon.StatusBarView -> {
-                val drawable = renderIcon.impl.drawable
-                if (drawable != null) {
-                    Image(
-                        bitmap = drawable.toScaledBitmap(SizeBadge),
-                        contentDescription = null,
-                        modifier = Modifier.size(SizeBadge),
-                    )
-                }
-            }
+
             is OngoingActivityChipModel.ChipIcon.StatusBarNotificationIcon -> {
                 val drawable = remember(event.active.managingPackageName) {
                     event.active.managingPackageName?.let { pkg ->
@@ -1156,6 +1147,7 @@ private fun AospChipText(event: IslandEvent.AospChip, modifier: Modifier, overri
     val color = overrideColor ?: aospChipAccent(event.active)
     when (val c = event.active.content) {
         is OngoingActivityChipModel.Content.Text -> MarqueeLabel(c.text, color, modifier)
+        is OngoingActivityChipModel.Content.TextVariants -> c.textVariants.firstOrNull()?.let { MarqueeLabel(it, color, modifier) }
         is OngoingActivityChipModel.Content.Timer -> AospChipTimerText(c, color, modifier)
         is OngoingActivityChipModel.Content.ShortTimeDelta -> AospChipDeltaText(c, color, modifier)
         is OngoingActivityChipModel.Content.Countdown ->
@@ -1166,24 +1158,26 @@ private fun AospChipText(event: IslandEvent.AospChip, modifier: Modifier, overri
 
 @Composable
 private fun AospChipTimerText(content: OngoingActivityChipModel.Content.Timer, color: Color, modifier: Modifier) {
-    var elapsedMs by remember(content.startTimeMs, content.isEventInFuture, content.timeSource) {
+    var elapsedMs by remember(content.value, content.timeSource) {
         mutableLongStateOf(aospTimerElapsedMs(content))
     }
-    LaunchedEffect(content.startTimeMs, content.isEventInFuture, content.timeSource) {
+    LaunchedEffect(content.value, content.timeSource) {
         while (true) {
             elapsedMs = aospTimerElapsedMs(content)
-            delay(1000L - abs(content.startTimeMs - content.timeSource.getCurrentTime()) % 1000L)
+            delay(1000L)
         }
     }
     PillMonoLabel(formatCountdownLong(elapsedMs), color, modifier)
 }
 
 private fun aospTimerElapsedMs(content: OngoingActivityChipModel.Content.Timer): Long {
-    val now = content.timeSource.getCurrentTime()
-    return if (content.isEventInFuture) {
-        (content.startTimeMs - now).coerceAtLeast(0L)
-    } else {
-        (now - content.startTimeMs).coerceAtLeast(0L)
+    return when (val v = content.value) {
+        is com.android.systemui.statusbar.chips.ui.model.Chronometer.Running -> {
+            val target = v.eventTime.asElapsedRealtime(content.timeSource)
+            val now = content.timeSource.elapsedRealtime()
+            if (v.isCountdown) (target - now).coerceAtLeast(0L) else (now - target).coerceAtLeast(0L)
+        }
+        is com.android.systemui.statusbar.chips.ui.model.Chronometer.Paused -> v.atDuration.toMillis()
     }
 }
 

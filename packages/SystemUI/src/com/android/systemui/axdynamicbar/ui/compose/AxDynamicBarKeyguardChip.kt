@@ -849,6 +849,9 @@ private fun AospKeyguardChipText(
         is OngoingActivityChipModel.Content.Text -> {
             if (content.text.isNotBlank()) MarqueeText(content.text, color, modifier)
         }
+        is OngoingActivityChipModel.Content.TextVariants -> {
+            content.textVariants.firstOrNull()?.let { if (it.isNotBlank()) MarqueeText(it, color, modifier) }
+        }
         is OngoingActivityChipModel.Content.Timer -> AospKeyguardTimerText(content, color, modifier)
         is OngoingActivityChipModel.Content.ShortTimeDelta -> AospKeyguardDeltaText(content, color, modifier)
         is OngoingActivityChipModel.Content.Countdown ->
@@ -863,24 +866,26 @@ private fun AospKeyguardTimerText(
     color: Color,
     modifier: Modifier,
 ) {
-    var elapsedMs by remember(content.startTimeMs, content.isEventInFuture, content.timeSource) {
+    var elapsedMs by remember(content.value, content.timeSource) {
         mutableLongStateOf(aospTimerElapsedMs(content))
     }
-    LaunchedEffect(content.startTimeMs, content.isEventInFuture, content.timeSource) {
+    LaunchedEffect(content.value, content.timeSource) {
         while (true) {
             elapsedMs = aospTimerElapsedMs(content)
-            delay(1000L - abs(content.startTimeMs - content.timeSource.getCurrentTime()) % 1000L)
+            delay(1000L)
         }
     }
     PillMonoLabel(formatCountdownLong(elapsedMs), color, modifier)
 }
 
 private fun aospTimerElapsedMs(content: OngoingActivityChipModel.Content.Timer): Long {
-    val now = content.timeSource.getCurrentTime()
-    return if (content.isEventInFuture) {
-        (content.startTimeMs - now).coerceAtLeast(0L)
-    } else {
-        (now - content.startTimeMs).coerceAtLeast(0L)
+    return when (val v = content.value) {
+        is com.android.systemui.statusbar.chips.ui.model.Chronometer.Running -> {
+            val target = v.eventTime.asElapsedRealtime(content.timeSource)
+            val now = content.timeSource.elapsedRealtime()
+            if (v.isCountdown) (target - now).coerceAtLeast(0L) else (now - target).coerceAtLeast(0L)
+        }
+        is com.android.systemui.statusbar.chips.ui.model.Chronometer.Paused -> v.atDuration.toMillis()
     }
 }
 
