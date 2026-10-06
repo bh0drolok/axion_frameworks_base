@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.ui.viewmodel
 
+import android.content.Context
+
 import android.content.res.Resources
 import android.graphics.Rect
 import android.media.AudioManager
@@ -72,6 +74,7 @@ class QuickSettingsShadeOverlayContentViewModel
 @AssistedInject
 constructor(
     @Main private val mainDispatcher: CoroutineDispatcher,
+    @ShadeDisplayAware private val shadeContext: Context,
     val desktopInteractor: DesktopInteractor,
     audioStreamSliderViewModelFactory: AudioStreamSliderViewModel.Factory,
     val audioDetailsViewModelFactory: AudioDetailsViewModel.Factory,
@@ -143,7 +146,15 @@ constructor(
         }
     }
 
-    private val showVolumeSlider = expandedAudioTileDetailsFeatureInteractor.isEnabled()
+    private val showVolumeSlider =
+        expandedAudioTileDetailsFeatureInteractor.isEnabled() ||
+        runCatching {
+            android.provider.Settings.Secure.getInt(
+                shadeContext.contentResolver,
+                "qs_show_volume_slider",
+                1,
+            ) != 0
+        }.getOrDefault(true)
 
     val volumeSliderViewModel =
         if (showVolumeSlider && volumeSliderCoroutineScope != null)

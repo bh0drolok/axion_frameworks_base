@@ -176,6 +176,20 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import lineageos.providers.LineageSettings
+import android.content.Intent
+import android.media.AudioManager
+import android.provider.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
+import com.android.compose.PlatformSliderDefaults
+import com.android.settingslib.volume.shared.model.AudioStream
+import com.android.systemui.volume.panel.component.volume.domain.model.SliderType
+import com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel.AudioStreamSliderViewModel
+import com.android.systemui.volume.panel.component.volume.ui.composable.VolumeSlider
 
 @SuppressLint("ValidFragment")
 class QSFragmentCompose
@@ -186,7 +200,10 @@ constructor(
     private val dumpManager: DumpManager,
     @Background private val backgroundDispatcher: CoroutineDispatcher,
     @ShadeDisplayAware private val configurationController: ConfigurationController,
+    private val audioStreamSliderViewModelFactory: AudioStreamSliderViewModel.Factory,
 ) : LifecycleFragment(), QS, Dumpable {
+
+    private var volumeSliderViewModel: AudioStreamSliderViewModel? = null
 
     private val scrollListener = MutableStateFlow<QS.ScrollListener?>(null)
     private val collapsedMediaVisibilityChangedListener =
@@ -216,6 +233,13 @@ constructor(
         super.onCreate(savedInstanceState)
 
         viewModel = qsFragmentComposeViewModelFactory.create(lifecycleScope)
+
+        volumeSliderViewModel = audioStreamSliderViewModelFactory.create(
+            AudioStreamSliderViewModel.FactoryAudioStreamWrapper(
+                SliderType.Stream(AudioStream(AudioManager.STREAM_MUSIC)).stream
+            ),
+            lifecycleScope,
+        )
 
         setListenerCollections()
         lifecycleScope.launch { viewModel.activate() }
@@ -768,6 +792,11 @@ constructor(
                         BrightnessSlider(viewModel, layoutState)
                     }
                 }
+                val VolumeSlider: @Composable () -> Unit = {
+                    Element(Elements.VolumeSlider, modifier = modifier) {
+                        VolumeSlider(layoutState)
+                    }
+                }
                 if (viewModel.isQsEnabled) {
                     Box(
                         modifier =
@@ -780,6 +809,7 @@ constructor(
                     ) {
                         QuickQuickSettingsLayout(
                             brightness = BrightnessSlider,
+                            volume = VolumeSlider,
                             tiles = Tiles,
                             media = Media,
                             mediaInRow = viewModel.qqsMediaInRow,
@@ -891,6 +921,11 @@ constructor(
                                     )
                                 }
                             }
+                        val VolumeSlider: @Composable () -> Unit = {
+                            Element(Elements.VolumeSlider, modifier = modifier) {
+                                VolumeSlider(layoutState)
+                            }
+                        }
                         Box(
                             modifier =
                                 Modifier.fillMaxWidth()
@@ -908,6 +943,7 @@ constructor(
                                     } else {
                                         {}
                                     },
+                                volume = VolumeSlider,
                                 tiles = TileGrid,
                                 media = Media,
                                 mediaInRow = viewModel.qsMediaInRow,
@@ -925,6 +961,61 @@ constructor(
                 }
             }
             Spacer(Modifier.height { bottomContentPadding }.fillMaxWidth())
+        }
+    }
+
+    @Composable
+    private fun VolumeSlider(
+        layoutState: SceneTransitionLayoutState,
+    ) {
+        val vm = volumeSliderViewModel ?: return
+        val volumeSliderState by vm.slider.collectAsStateWithLifecycle()
+        val context = LocalContext.current
+
+        Box(
+            Modifier.systemGestureExclusionInShade(
+                enabled = {
+                    layoutState.transitionState is TransitionState.Idle &&
+                        viewModel.isNotTransitioning
+                }
+            )
+        ) {
+            AlwaysDarkMode {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    VolumeSlider(
+                        modifier = Modifier.weight(1f),
+                        showLabel = false,
+                        state = volumeSliderState,
+                        onValueChange = { newValue: Float ->
+                            vm.onValueChanged(volumeSliderState, newValue)
+                        },
+                        onValueChangeFinished = {
+                            vm.onValueChangeFinished()
+                        },
+                        onIconTapped = { vm.toggleMuted(volumeSliderState) },
+                        sliderColors = PlatformSliderDefaults.defaultPlatformSliderColors(),
+                        hapticsViewModelFactory = vm.getSliderHapticsViewModelFactory(),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_SOUND_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.horizontal_ellipsis),
+                            contentDescription = "Volume settings",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -1441,17 +1532,19 @@ private fun ContentScope.MediaObject(
 @VisibleForTesting
 fun QuickQuickSettingsLayout(
     brightness: @Composable () -> Unit,
+    volume: @Composable () -> Unit = {},
     tiles: @Composable () -> Unit,
     media: @Composable () -> Unit,
     mediaInRow: Boolean,
 ) {
-    val brightnessSettings = rememberQsBrightnessSettings()
-    val sliderAtTop = brightnessSettings.sliderAtTop
-    val showSlider = brightnessSettings.showSlider
+    val settings = rememberQsSliderSettings()
 
     Column(verticalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_vertical))) {
-        if (showSlider == 2 && sliderAtTop) {
+        if (settings.showBrightness == 2 && settings.brightnessAtTop) {
             brightness()
+        }
+        if (settings.showVolume == 2 && settings.volumeAtTop) {
+            volume()
         }
 
         if (mediaInRow) {
@@ -1463,12 +1556,20 @@ fun QuickQuickSettingsLayout(
                 Box(modifier = Modifier.weight(1f)) { media() }
             }
         } else {
-            tiles()
-            media()
+            if (settings.mediaAtTop) {
+                media()
+                tiles()
+            } else {
+                tiles()
+                media()
+            }
         }
 
-        if (showSlider == 2 && !sliderAtTop) {
+        if (settings.showBrightness == 2 && !settings.brightnessAtTop) {
             brightness()
+        }
+        if (settings.showVolume == 2 && !settings.volumeAtTop) {
+            volume()
         }
     }
 }
@@ -1478,20 +1579,22 @@ fun QuickQuickSettingsLayout(
 @VisibleForTesting
 fun QuickSettingsLayout(
     brightness: @Composable () -> Unit,
+    volume: @Composable () -> Unit = {},
     tiles: @Composable () -> Unit,
     media: @Composable () -> Unit,
     mediaInRow: Boolean,
 ) {
-    val brightnessSettings = rememberQsBrightnessSettings()
-    val sliderAtTop = brightnessSettings.sliderAtTop
-    val showSlider = brightnessSettings.showSlider
+    val settings = rememberQsSliderSettings()
 
     Column(
         verticalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_vertical)),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (showSlider != 0 && sliderAtTop) {
+        if (settings.showBrightness != 0 && settings.brightnessAtTop) {
             brightness()
+        }
+        if (settings.showVolume != 0 && settings.volumeAtTop) {
+            volume()
         }
 
         if (mediaInRow) {
@@ -1503,11 +1606,19 @@ fun QuickSettingsLayout(
                 Box(modifier = Modifier.weight(1f)) { media() }
             }
         } else {
-            tiles()
-            if (showSlider != 0 && !sliderAtTop) {
+            if (settings.mediaAtTop) {
+                media()
+                tiles()
+            } else {
+                tiles()
+                media()
+            }
+            if (settings.showBrightness != 0 && !settings.brightnessAtTop) {
                 brightness()
             }
-            media()
+            if (settings.showVolume != 0 && !settings.volumeAtTop) {
+                volume()
+            }
         }
     }
 }
@@ -1561,34 +1672,56 @@ private fun AlwaysDarkMode(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun rememberQsBrightnessSettings(): QsBrightnessSettings {
+private fun rememberQsSliderSettings(): QsSliderSettings {
     val context = LocalContext.current
     val cr = remember { context.contentResolver }
 
-    fun readCurrent(): QsBrightnessSettings {
-        val position = runCatching {
+    fun readCurrent(): QsSliderSettings {
+        val brightnessPos = runCatching {
             LineageSettings.Secure.getIntForUser(
                 cr, LineageSettings.Secure.QS_BRIGHTNESS_SLIDER_POSITION,
                 0, UserHandle.USER_CURRENT
             )
         }.getOrElse { 0 }
 
-        val showSliderValue = runCatching {
+        val showBrightness = runCatching {
             LineageSettings.Secure.getIntForUser(
                 cr, LineageSettings.Secure.QS_SHOW_BRIGHTNESS_SLIDER,
                 1, UserHandle.USER_CURRENT
             )
         }.getOrElse { 1 }
 
-        return QsBrightnessSettings(
-            sliderAtTop = position == 0,
-            showSlider = showSliderValue,
+        val volumePos = runCatching {
+            LineageSettings.Secure.getIntForUser(
+                cr, "qs_volume_slider_position",
+                0, UserHandle.USER_CURRENT
+            )
+        }.getOrElse { 0 }
+
+        val showVolume = runCatching {
+            LineageSettings.Secure.getIntForUser(
+                cr, "qs_show_volume_slider",
+                1, UserHandle.USER_CURRENT
+            )
+        }.getOrElse { 1 }
+
+        val mediaPos = runCatching {
+            LineageSettings.Secure.getIntForUser(
+                cr, "qs_media_position",
+                0, UserHandle.USER_CURRENT
+            )
+        }.getOrElse { 0 }
+
+        return QsSliderSettings(
+            brightnessAtTop = brightnessPos == 0,
+            showBrightness = showBrightness,
+            volumeAtTop = volumePos == 0,
+            showVolume = showVolume,
+            mediaAtTop = mediaPos == 0,
         )
     }
 
-    var state by remember {
-        mutableStateOf(readCurrent())
-    }
+    var state by remember { mutableStateOf(readCurrent()) }
 
     DisposableEffect(Unit) {
         val observer = object : ContentObserver(null) {
@@ -1607,6 +1740,18 @@ private fun rememberQsBrightnessSettings(): QsBrightnessSettings {
             LineageSettings.Secure.getUriFor(LineageSettings.Secure.QS_SHOW_BRIGHTNESS_SLIDER),
             false, observer, UserHandle.USER_ALL
         )
+        cr.registerContentObserver(
+            LineageSettings.Secure.getUriFor("qs_volume_slider_position"),
+            false, observer, UserHandle.USER_ALL
+        )
+        cr.registerContentObserver(
+            LineageSettings.Secure.getUriFor("qs_show_volume_slider"),
+            false, observer, UserHandle.USER_ALL
+        )
+        cr.registerContentObserver(
+            LineageSettings.Secure.getUriFor("qs_media_position"),
+            false, observer, UserHandle.USER_ALL
+        )
 
         onDispose {
             cr.unregisterContentObserver(observer)
@@ -1616,7 +1761,10 @@ private fun rememberQsBrightnessSettings(): QsBrightnessSettings {
     return state
 }
 
-private data class QsBrightnessSettings(
-    val sliderAtTop: Boolean,
-    val showSlider: Int,
+private data class QsSliderSettings(
+    val brightnessAtTop: Boolean,
+    val showBrightness: Int,
+    val volumeAtTop: Boolean,
+    val showVolume: Int,
+    val mediaAtTop: Boolean,
 )
