@@ -249,7 +249,9 @@ internal fun rememberIslandColors(event: IslandEvent): IslandColorScheme =
 
 @Composable
 internal fun rememberMediaColors(event: IslandEvent.Media): IslandColorScheme {
-    val raw = if (event.mediaColor != 0) Color(event.mediaColor) else PurpleAccent
+    val paletteColor = (event.albumArt ?: event.appIcon)?.let { rememberPaletteColor(it) }
+    val raw = paletteColor
+        ?: if (event.mediaColor != 0) Color(event.mediaColor) else PurpleAccent
     return buildColorScheme(raw)
 }
 
@@ -274,8 +276,12 @@ private fun ensureContrast(color: Color): Color {
 
 @Composable
 internal fun chipAccentColorFor(event: IslandEvent): Color {
-    if (event is IslandEvent.Media && event.mediaColor != 0) {
-        return darkenColor(Color(event.mediaColor))
+    if (event is IslandEvent.Media) {
+        val paletteColor = (event.albumArt ?: event.appIcon)?.let { rememberPaletteColor(it) }
+        val raw = paletteColor
+            ?: if (event.mediaColor != 0) Color(event.mediaColor) else PurpleAccent
+        val isDark = isSystemInDarkTheme()
+        return ensureContrast(raw, isDark)
     }
     if (event is IslandEvent.AppSwitch) {
         val app = event.previousApp ?: event.recentApps.firstOrNull()
@@ -308,10 +314,11 @@ private fun rememberPaletteColor(drawable: Drawable): Color? {
                 try {
                     val palette = Palette.from(it).generate()
                     val swatch =
-                        palette.darkVibrantSwatch
-                            ?: palette.vibrantSwatch
-                            ?: palette.darkMutedSwatch
+                        palette.vibrantSwatch
+                            ?: palette.darkVibrantSwatch
+                            ?: palette.lightVibrantSwatch
                             ?: palette.dominantSwatch
+                            ?: palette.mutedSwatch
                     swatch?.let { s -> Color(s.rgb) }
                 } catch (_: Exception) {
                     null

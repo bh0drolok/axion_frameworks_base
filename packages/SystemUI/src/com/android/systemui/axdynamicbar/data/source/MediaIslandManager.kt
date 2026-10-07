@@ -13,6 +13,7 @@ import android.media.session.MediaSessionManager as SystemMediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.SystemClock
+import androidx.palette.graphics.Palette
 import android.util.Log
 import com.android.systemui.axdynamicbar.model.IslandEvent
 import com.android.systemui.dagger.SysUISingleton
@@ -225,6 +226,27 @@ constructor(
                     bmp?.let { BitmapDrawable(context.resources, it) }
                 }
                 val resolvedAlbumArt = resolveAlbumArt(track, artist, albumArt)
+
+                val artBitmap = (resolvedAlbumArt as? BitmapDrawable)?.bitmap
+                    ?: (albumArt as? BitmapDrawable)?.bitmap
+                    ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                    ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+
+                val extractedColor = artBitmap?.let { bmp ->
+                    runCatching {
+                        val palette = Palette.from(bmp).generate()
+                        val swatch =
+                            palette.vibrantSwatch
+                                ?: palette.darkVibrantSwatch
+                                ?: palette.lightVibrantSwatch
+                                ?: palette.dominantSwatch
+                                ?: palette.mutedSwatch
+                        swatch?.rgb
+                    }.getOrNull()
+                }
+                if (extractedColor != null) {
+                    sessionMediaColor = extractedColor
+                }
 
                 val controller = getActiveController()
                 val ps = controller?.playbackState
