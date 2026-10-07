@@ -120,6 +120,22 @@ class MediaHost(
 
         this.location = location
         hostView = mediaHierarchyManager.register(this)
+
+        if (location == MediaHierarchyManager.LOCATION_QS || location == MediaHierarchyManager.LOCATION_QQS) {
+            val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    updateViewVisibility()
+                }
+            }
+            runCatching {
+                hostView.context.contentResolver.registerContentObserver(
+                    lineageos.providers.LineageSettings.Secure.getUriFor("qs_media_position"),
+                    false,
+                    observer,
+                    android.os.UserHandle.USER_ALL,
+                )
+            }
+        }
         // Listen by default, as the host might not be attached by our clients, until
         // they get a visibility change. We still want to stay up to date in that case!
         setListeningToMediaData(true)
@@ -180,8 +196,19 @@ class MediaHost(
      */
     fun updateViewVisibility() {
         val oldState = state.visible
+        val isQsMediaHidden =
+            (location == MediaHierarchyManager.LOCATION_QS || location == MediaHierarchyManager.LOCATION_QQS) &&
+            runCatching {
+                lineageos.providers.LineageSettings.Secure.getIntForUser(
+                    hostView.context.contentResolver,
+                    "qs_media_position",
+                    0,
+                    android.os.UserHandle.USER_CURRENT,
+                ) == 2
+            }.getOrDefault(false)
+
         state.visible =
-            if (mediaCarouselController.isLockedAndHidden()) {
+            if (isQsMediaHidden || mediaCarouselController.isLockedAndHidden()) {
                 false
             } else if (showsOnlyActiveMedia) {
                 mediaDataManager.hasActiveMedia()

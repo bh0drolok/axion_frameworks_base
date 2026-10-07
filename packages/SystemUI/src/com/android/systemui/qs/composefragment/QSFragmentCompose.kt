@@ -1557,7 +1557,7 @@ fun QuickQuickSettingsLayout(
             volume()
         }
 
-        if (mediaInRow) {
+        if (mediaInRow && !settings.mediaHidden) {
             Row(
                 horizontalArrangement = spacedBy(QuickSettingsShade.Dimensions.HorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1566,7 +1566,9 @@ fun QuickQuickSettingsLayout(
                 Box(modifier = Modifier.weight(1f)) { media() }
             }
         } else {
-            if (settings.mediaAtTop) {
+            if (settings.mediaHidden) {
+                tiles()
+            } else if (settings.mediaAtTop) {
                 media()
                 tiles()
             } else {
@@ -1607,7 +1609,7 @@ fun QuickSettingsLayout(
             volume()
         }
 
-        if (mediaInRow) {
+        if (mediaInRow && !settings.mediaHidden) {
             Row(
                 horizontalArrangement = spacedBy(QuickSettingsShade.Dimensions.HorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1616,7 +1618,9 @@ fun QuickSettingsLayout(
                 Box(modifier = Modifier.weight(1f)) { media() }
             }
         } else {
-            if (settings.mediaAtTop) {
+            if (settings.mediaHidden) {
+                tiles()
+            } else if (settings.mediaAtTop) {
                 media()
                 tiles()
             } else {
@@ -1728,6 +1732,7 @@ private fun rememberQsSliderSettings(): QsSliderSettings {
             volumeAtTop = volumePos == 0,
             showVolume = showVolume,
             mediaAtTop = mediaPos == 0,
+            mediaHidden = mediaPos == 2,
         )
     }
 
@@ -1777,4 +1782,5 @@ private data class QsSliderSettings(
     val volumeAtTop: Boolean,
     val showVolume: Int,
     val mediaAtTop: Boolean,
+    val mediaHidden: Boolean,
 )
